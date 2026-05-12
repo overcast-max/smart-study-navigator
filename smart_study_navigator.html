@@ -1,0 +1,709 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Smart Study Navigator - Hackathon Demo</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:'Inter',sans-serif;background:#f0f4f8;color:#1e293b}
+
+/* Loading Screen */
+#loader{position:fixed;top:0;left:0;width:100%;height:100%;background:#fff;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity 0.5s}
+#loader.hidden{opacity:0;pointer-events:none}
+#loader .spin{width:50px;height:50px;border:4px solid #e0e7ff;border-top-color:#6366f1;border-radius:50%;animation:spin 1s linear infinite}
+#loader p{margin-top:15px;color:#64748b;font-weight:500}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Toast */
+#toasts{position:fixed;top:80px;right:15px;z-index:9998;display:flex;flex-direction:column;gap:8px}
+.toast{background:#fff;border-radius:10px;padding:14px 18px;box-shadow:0 10px 30px rgba(0,0,0,0.15);display:flex;align-items:center;gap:10px;min-width:280px;animation:slideIn 0.3s ease-out;border-left:4px solid #6366f1}
+.toast.ok{border-left-color:#10b981}
+.toast.warn{border-left-color:#f59e0b}
+.toast i{width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.toast.ok i{background:#d1fae5;color:#10b981}
+.toast.warn i{background:#fef3c7;color:#f59e0b}
+.toast div h4{font-size:0.9rem;margin-bottom:2px}
+.toast div p{font-size:0.8rem;color:#64748b}
+@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+
+/* Nav */
+.nav{background:rgba(255,255,255,0.95);position:fixed;top:0;width:100%;padding:12px 30px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 15px rgba(0,0,0,0.08);z-index:100}
+.logo{display:flex;align-items:center;gap:10px;font-weight:800;font-size:1.2rem;color:#6366f1}
+.logo i{width:36px;height:36px;background:linear-gradient(135deg,#6366f1,#8b5cf6);border-radius:10px;display:flex;align-items:center;justify-content:center;color:#fff}
+.nav-links{display:flex;gap:25px;list-style:none}
+.nav-links a{text-decoration:none;color:#64748b;font-weight:500;cursor:pointer;transition:0.3s}
+.nav-links a:hover,.nav-links a.active{color:#6366f1}
+.badge{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;padding:6px 16px;border-radius:20px;font-size:0.8rem;font-weight:600}
+
+/* Sections */
+.sec{display:none;min-height:100vh;padding-top:70px}
+.sec.active{display:block}
+
+/* Hero */
+.hero{background:linear-gradient(135deg,#f0f4f8,#e0e7ff,#f0f4f8);min-height:100vh;display:flex;align-items:center;padding:40px}
+.hero-c{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:50px;align-items:center}
+.hero h1{font-size:3rem;font-weight:800;background:linear-gradient(135deg,#6366f1,#8b5cf6);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:15px}
+.hero .sub{color:#64748b;font-size:1.1rem;margin-bottom:25px;line-height:1.6}
+.hero-b{display:flex;gap:10px;margin-bottom:25px;flex-wrap:wrap}
+.hero-b span{background:#fff;padding:6px 14px;border-radius:20px;font-size:0.8rem;font-weight:600;color:#6366f1;border:1px solid rgba(99,102,241,0.2)}
+.btns{display:flex;gap:12px;margin-bottom:30px}
+.btn{padding:12px 28px;border-radius:10px;font-weight:600;cursor:pointer;border:none;display:inline-flex;align-items:center;gap:8px;transition:0.3s;font-size:0.95rem}
+.btn-p{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff;box-shadow:0 4px 15px rgba(99,102,241,0.3)}
+.btn-p:hover{transform:translateY(-2px);box-shadow:0 6px 25px rgba(99,102,241,0.4)}
+.btn-s{background:#fff;color:#6366f1;border:2px solid #6366f1}
+.btn-s:hover{background:#6366f1;color:#fff}
+.btn-sm{padding:6px 14px;font-size:0.8rem}
+
+.fgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:15px}
+.fcard{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.06);transition:0.3s}
+.fcard:hover{transform:translateY(-5px)}
+.ficon{width:45px;height:45px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:12px}
+.fcard:nth-child(1) .ficon{background:#e0e7ff;color:#6366f1}
+.fcard:nth-child(2) .ficon{background:#d1fae5;color:#10b981}
+.fcard:nth-child(3) .ficon{background:#fef3c7;color:#f59e0b}
+.fcard:nth-child(4) .ficon{background:#fce7f3;color:#ec4899}
+.fcard h4{font-size:1rem;margin-bottom:6px}
+.fcard p{font-size:0.85rem;color:#64748b;line-height:1.5}
+
+.preview{background:#fff;border-radius:20px;padding:25px;box-shadow:0 10px 40px rgba(99,102,241,0.15);transform:perspective(1000px) rotateY(-3deg);transition:0.3s}
+.preview:hover{transform:perspective(1000px) rotateY(0deg)}
+.preview h3{font-size:1rem;margin-bottom:15px;display:flex;justify-content:space-between}
+.preview h3 span{color:#64748b;font-weight:400;font-size:0.85rem}
+.pstats{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:15px}
+.pstat{background:linear-gradient(135deg,#f0f4f8,#e0e7ff);padding:12px;border-radius:10px;text-align:center}
+.pstat b{font-size:1.3rem;color:#6366f1;display:block}
+.pstat span{font-size:0.75rem;color:#64748b}
+.task{display:flex;align-items:center;gap:10px;padding:10px;background:#f8fafc;border-radius:8px;margin-bottom:8px;font-size:0.9rem}
+.task i{width:20px;height:20px;border-radius:50%;border:2px solid #10b981;display:flex;align-items:center;justify-content:center;color:#10b981;font-size:0.6rem}
+.task.pending i{border-color:#64748b;color:#64748b}
+
+/* Setup */
+.setup{max-width:700px;margin:0 auto;padding:30px 20px}
+.setup h2{text-align:center;font-size:2rem;margin-bottom:8px}
+.setup>p{text-align:center;color:#64748b;margin-bottom:30px}
+.steps{display:flex;justify-content:center;gap:20px;margin-bottom:30px}
+.step{display:flex;flex-direction:column;align-items:center;gap:6px}
+.step div{width:36px;height:36px;border-radius:50%;background:#e2e8f0;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:0.9rem;color:#64748b}
+.step span{font-size:0.8rem;color:#64748b}
+.step.active div{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.step.active span{color:#6366f1;font-weight:600}
+.step.done div{background:#10b981;color:#fff}
+
+.form{background:#fff;border-radius:20px;padding:30px;box-shadow:0 4px 15px rgba(0,0,0,0.06);margin-bottom:15px}
+.form-g{margin-bottom:20px}
+.form-g label{display:block;margin-bottom:6px;font-weight:600;font-size:0.95rem}
+.form-g input,.form-g select{width:100%;padding:12px 16px;border:2px solid #e2e8f0;border-radius:10px;font-size:0.95rem;font-family:'Inter',sans-serif}
+.form-g input:focus,.form-g select:focus{outline:none;border-color:#6366f1}
+.tags{display:flex;flex-wrap:wrap;gap:8px}
+.tag{background:#e0e7ff;color:#6366f1;padding:6px 14px;border-radius:20px;font-size:0.85rem;cursor:pointer;transition:0.3s;border:2px solid transparent}
+.tag:hover,.tag.on{background:#6366f1;color:#fff}
+.tgrid{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.tcol h4{margin-bottom:10px;font-size:0.95rem}
+.tcol:first-child h4{color:#ef4444}
+.tcol:last-child h4{color:#10b981}
+.tarea{background:#f8fafc;border-radius:10px;padding:12px;min-height:100px;margin-bottom:8px}
+.chip{display:inline-flex;align-items:center;gap:4px;background:#fff;padding:5px 10px;border-radius:12px;font-size:0.8rem;margin:3px;box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.chip span{cursor:pointer;color:#64748b;margin-left:4px}
+.chip span:hover{color:#ef4444}
+.fact{display:flex;justify-content:space-between;margin-top:20px}
+
+/* Dashboard */
+.dash{max-width:1300px;margin:0 auto;padding:15px}
+.dh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;padding:15px 20px;background:#fff;border-radius:14px;box-shadow:0 4px 15px rgba(0,0,0,0.06)}
+.dh h2{font-size:1.3rem}
+.dh p{color:#64748b;font-size:0.85rem;margin-top:4px}
+.dacts{display:flex;gap:8px}
+.dbtn{width:40px;height:40px;border-radius:10px;border:none;background:#f0f4f8;color:#64748b;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:0.3s}
+.dbtn:hover{background:#6366f1;color:#fff}
+.dgrid{display:grid;grid-template-columns:260px 1fr 300px;gap:15px}
+
+.sbar{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.06);margin-bottom:15px}
+.sbar h4{font-size:0.95rem;margin-bottom:12px;display:flex;align-items:center;gap:8px}
+.sbar h4 i{color:#6366f1}
+.menu{list-style:none}
+.menu li{margin-bottom:4px}
+.menu a{display:flex;align-items:center;gap:10px;padding:10px 14px;border-radius:8px;color:#64748b;text-decoration:none;font-size:0.9rem;cursor:pointer;transition:0.3s}
+.menu a:hover,.menu a.on{background:linear-gradient(135deg,#e0e7ff,#f0f4f8);color:#6366f1;font-weight:600}
+.menu a span{margin-left:auto;background:#6366f1;color:#fff;padding:2px 8px;border-radius:10px;font-size:0.7rem}
+
+.streak{display:flex;align-items:center;justify-content:center;gap:12px;padding:15px;background:linear-gradient(135deg,#fef3c7,#fde68a);border-radius:10px;margin-bottom:12px}
+.streak b{font-size:1.3rem;color:#f59e0b}
+.streak p{font-size:0.8rem;color:#64748b}
+.days{display:flex;justify-content:space-between;text-align:center;font-size:0.75rem;color:#64748b}
+.days i{color:#10b981}
+.days i.off{color:#cbd5e1}
+
+.main{display:flex;flex-direction:column;gap:15px}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:15px}
+.stat{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.06);position:relative;overflow:hidden}
+.stat::before{content:'';position:absolute;top:0;left:0;width:4px;height:100%}
+.stat:nth-child(1)::before{background:#6366f1}
+.stat:nth-child(2)::before{background:#10b981}
+.stat:nth-child(3)::before{background:#f59e0b}
+.stat i{width:42px;height:42px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:1.2rem;margin-bottom:10px}
+.stat:nth-child(1) i{background:#e0e7ff;color:#6366f1}
+.stat:nth-child(2) i{background:#d1fae5;color:#10b981}
+.stat:nth-child(3) i{background:#fef3c7;color:#f59e0b}
+.stat b{font-size:1.8rem;display:block;margin-bottom:4px}
+.stat span{color:#64748b;font-size:0.85rem}
+.stat small{display:inline-flex;align-items:center;gap:4px;font-size:0.75rem;margin-top:6px;color:#10b981;font-weight:600}
+
+.card{background:#fff;border-radius:14px;padding:20px;box-shadow:0 4px 15px rgba(0,0,0,0.06)}
+.ch{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+.ch h3{font-size:1.1rem}
+.ch span{color:#6366f1;font-size:0.85rem;font-weight:600;cursor:pointer}
+
+/* Roadmap */
+.time{position:relative;padding-left:25px}
+.time::before{content:'';position:absolute;left:6px;top:0;bottom:0;width:2px;background:linear-gradient(to bottom,#6366f1,#06b6d4)}
+.ritem{position:relative;padding-bottom:20px}
+.ritem>div:first-child{position:absolute;left:-25px;top:3px;width:16px;height:16px;border-radius:50%;background:#fff;border:3px solid #6366f1;z-index:1}
+.ritem>div.done:first-child{background:#10b981;border-color:#10b981}
+.ritem>div.now:first-child{background:#6366f1;border-color:#6366f1;animation:pulse 2s infinite}
+.rc{background:#f8fafc;border-radius:10px;padding:14px;border-left:3px solid #6366f1}
+.rc.done{border-left-color:#10b981;opacity:0.7}
+.rc.now{border-left-color:#6366f1;background:linear-gradient(135deg,#f0f4f8,#e0e7ff)}
+.rc small{color:#64748b;font-size:0.75rem;display:block;margin-bottom:4px}
+.rc b{font-size:0.95rem;display:block;margin-bottom:6px}
+.rc span{display:inline-block;background:#fff;padding:3px 10px;border-radius:6px;font-size:0.75rem;color:#6366f1;margin:2px;font-weight:500}
+.ra{display:flex;gap:8px;margin-top:10px}
+
+/* Focus */
+.focus{background:linear-gradient(135deg,#1e293b,#0f172a);border-radius:14px;padding:25px;color:#fff;position:relative;overflow:hidden}
+.focus::before{content:'';position:absolute;top:-50%;right:-20%;width:250px;height:250px;background:radial-gradient(circle,rgba(99,102,241,0.2) 0%,transparent 70%)}
+.fh{display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;position:relative;z-index:1}
+.fh h4{font-size:1.1rem;display:flex;align-items:center;gap:8px}
+.fh span{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);padding:5px 12px;border-radius:20px;font-size:0.8rem}
+.fh span i{width:8px;height:8px;border-radius:50%;background:#10b981;animation:pulse 2s infinite}
+.fg{display:flex;justify-content:center;margin:25px 0;position:relative;z-index:1}
+.gauge{width:180px;height:180px;border-radius:50%;background:conic-gradient(from 0deg,#10b981 0deg,#10b981 252deg,rgba(255,255,255,0.1) 252deg);display:flex;align-items:center;justify-content:center}
+.gin{width:145px;height:145px;border-radius:50%;background:#1e293b;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.gin b{font-size:2.2rem;color:#10b981}
+.gin span{font-size:0.8rem;color:rgba(255,255,255,0.6)}
+.fm{display:grid;grid-template-columns:1fr 1fr;gap:12px;position:relative;z-index:1}
+.fm div{background:rgba(255,255,255,0.05);padding:10px;border-radius:8px;text-align:center}
+.fm div b{font-size:1.2rem;display:block;margin-bottom:3px}
+.fm div span{font-size:0.75rem;color:rgba(255,255,255,0.6)}
+.fa{margin-top:15px;position:relative;z-index:1}
+.alert{background:rgba(245,158,11,0.15);border:1px solid rgba(245,158,11,0.3);border-radius:8px;padding:10px;margin-bottom:8px;display:flex;align-items:center;gap:10px;font-size:0.85rem}
+.alert.danger{background:rgba(239,68,68,0.15);border-color:rgba(239,68,68,0.3)}
+.alert i{width:32px;height:32px;border-radius:50%;background:rgba(245,158,11,0.2);display:flex;align-items:center;justify-content:center;color:#f59e0b;flex-shrink:0}
+.alert.danger i{background:rgba(239,68,68,0.2);color:#ef4444}
+
+/* AI */
+.ai{background:linear-gradient(135deg,#f0f4f8,#e0e7ff);border-radius:10px;padding:14px;margin-bottom:10px;border-left:3px solid #6366f1}
+.ai h5{display:flex;align-items:center;gap:6px;margin-bottom:6px;color:#6366f1;font-size:0.95rem}
+.ai h5 span{background:#6366f1;color:#fff;padding:2px 8px;border-radius:6px;font-size:0.7rem;margin-left:6px}
+.ai p{font-size:0.9rem;line-height:1.5}
+
+/* Progress Charts */
+.pcharts{display:grid;grid-template-columns:1fr 1fr;gap:15px}
+.pchart{background:#f8fafc;border-radius:12px;padding:15px;text-align:center}
+.pchart h4{margin-bottom:12px;font-size:0.95rem}
+.bars{display:flex;align-items:flex-end;justify-content:center;gap:6px;height:120px}
+.bars div{width:25px;background:#6366f1;border-radius:4px 4px 0 0;opacity:0.8}
+.pie{position:relative;width:100px;height:100px;margin:0 auto}
+.pie svg{transform:rotate(-90deg)}
+.pie div{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);font-size:1.3rem;font-weight:700;color:#6366f1}
+
+/* Right Panel */
+.rings{display:flex;justify-content:center;padding:15px 0}
+.ring{position:relative;width:130px;height:130px}
+.ring div{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);text-align:center}
+.ring div b{font-size:1.8rem;color:#6366f1}
+.ring div span{font-size:0.75rem;color:#64748b}
+
+.wlist{list-style:none}
+.witem{display:flex;align-items:center;gap:10px;padding:10px;background:#f8fafc;border-radius:8px;margin-bottom:6px}
+.witem span:first-child{font-size:0.85rem;font-weight:500;min-width:70px}
+.witem div{flex:1;height:5px;background:#e2e8f0;border-radius:3px;overflow:hidden}
+.witem div div{height:100%;border-radius:3px}
+.witem span:last-child{font-size:0.8rem;font-weight:600;min-width:30px;text-align:right}
+
+.notif{padding:10px;border-radius:8px;margin-bottom:8px;font-size:0.85rem}
+.notif:nth-child(1){background:linear-gradient(135deg,#fef3c7,#fde68a)}
+.notif:nth-child(2){background:linear-gradient(135deg,#e0e7ff,#c7d2fe)}
+.notif:nth-child(3){background:linear-gradient(135deg,#d1fae5,#a7f3d0)}
+
+/* Modal */
+.modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:2000;align-items:center;justify-content:center}
+.modal.on{display:flex}
+.mbox{background:#fff;border-radius:20px;padding:30px;max-width:500px;width:90%;max-height:90vh;overflow-y:auto;position:relative}
+.mclose{position:absolute;top:15px;right:15px;width:32px;height:32px;border-radius:50%;border:none;background:#f0f4f8;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.mclose:hover{background:#ef4444;color:#fff}
+.timer{text-align:center;margin:25px 0}
+.timer>div{width:180px;height:180px;border-radius:50%;background:linear-gradient(135deg,#e0e7ff,#f0f4f8);display:flex;flex-direction:column;align-items:center;justify-content:center;margin:0 auto}
+.timer b{font-size:2.5rem;color:#6366f1;font-variant-numeric:tabular-nums}
+.timer span{color:#64748b;font-size:0.85rem}
+.breath{display:none;text-align:center;padding:20px}
+.breath.on{display:block}
+.breath>div{width:120px;height:120px;border-radius:50%;background:linear-gradient(135deg,#a5f3fc,#67e8f9);margin:15px auto;display:flex;align-items:center;justify-content:center;font-size:1.8rem;animation:breathe 4s ease-in-out infinite}
+.breath p{color:#6366f1;font-weight:600;margin-top:10px}
+.sctrl{display:flex;gap:10px;justify-content:center;margin-top:20px}
+
+/* Features Page */
+.fpage{max-width:1100px;margin:0 auto;padding:30px 20px}
+.fpage>h2{text-align:center;font-size:2rem;margin-bottom:30px}
+.fdgrid{display:grid;grid-template-columns:repeat(2,1fr);gap:20px}
+.fdcard{background:#fff;border-radius:16px;padding:25px;box-shadow:0 4px 15px rgba(0,0,0,0.06);transition:0.3s}
+.fdcard:hover{transform:translateY(-5px)}
+.fdicon{width:50px;height:50px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.3rem;margin-bottom:15px}
+.fdcard:nth-child(1) .fdicon{background:#e0e7ff;color:#6366f1}
+.fdcard:nth-child(2) .fdicon{background:#d1fae5;color:#10b981}
+.fdcard:nth-child(3) .fdicon{background:#fef3c7;color:#f59e0b}
+.fdcard:nth-child(4) .fdicon{background:#fce7f3;color:#ec4899}
+.fdcard:nth-child(5) .fdicon{background:#e0e7ff;color:#6366f1}
+.fdcard:nth-child(6) .fdicon{background:#d1fae5;color:#10b981}
+.fdcard h3{font-size:1.15rem;margin-bottom:10px}
+.fdcard p{color:#64748b;line-height:1.6;margin-bottom:12px;font-size:0.9rem}
+.fdcard ul{list-style:none}
+.fdcard ul li{padding:5px 0;font-size:0.9rem}
+.fdcard ul li::before{content:'✓ ';color:#10b981;font-weight:bold}
+
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+@keyframes breathe{0%,100%{transform:scale(1);opacity:0.8}50%{transform:scale(1.2);opacity:0.4}}
+
+@media(max-width:1000px){.dgrid{grid-template-columns:1fr}.hero-c{grid-template-columns:1fr}.fdgrid{grid-template-columns:1fr}.fgrid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.tgrid{grid-template-columns:1fr}.pcharts{grid-template-columns:1fr}}
+@media(max-width:600px){.hero h1{font-size:2rem}.nav-links{display:none}.steps{gap:10px}.step span{display:none}}
+</style>
+</head>
+<body>
+
+<div id="loader"><div class="spin"></div><p>Initializing Smart Study Navigator...</p></div>
+<div id="toasts"></div>
+
+<nav class="nav">
+<div class="logo"><i class="fas fa-compass"></i><span>Smart Study Navigator</span></div>
+<ul class="nav-links">
+<li><a class="active" onclick="go('home')" id="n-home">Home</a></li>
+<li><a onclick="go('setup')" id="n-setup">Setup</a></li>
+<li><a onclick="go('dash')" id="n-dash">Dashboard</a></li>
+<li><a onclick="go('feat')" id="n-feat">Features</a></li>
+</ul>
+<div class="badge"><i class="fas fa-user-graduate"></i> Saismita Pradhan</div>
+</nav>
+
+<!-- HOME -->
+<section class="sec active" id="home">
+<div class="hero">
+<div class="hero-c">
+<div>
+<div class="hero-b">
+<span><i class="fas fa-robot"></i> AI-Powered</span>
+<span><i class="fas fa-brain"></i> Focus Detection</span>
+<span><i class="fas fa-route"></i> Smart Roadmap</span>
+</div>
+<h1>Your AI Study<br>Companion</h1>
+<p class="sub">Navigate your academic journey with intelligent planning, real-time focus monitoring, and personalized recommendations.</p>
+<div class="btns">
+<button class="btn btn-p" onclick="go('setup')"><i class="fas fa-rocket"></i> Start Your Journey</button>
+<button class="btn btn-s" onclick="go('feat')"><i class="fas fa-play-circle"></i> Explore Features</button>
+</div>
+<div class="fgrid">
+<div class="fcard"><div class="ficon"><i class="fas fa-map-marked-alt"></i></div><h4>Smart Roadmap</h4><p>AI-generated daily study plans based on exam dates and topic strengths.</p></div>
+<div class="fcard"><div class="ficon"><i class="fas fa-eye"></i></div><h4>Focus Detection</h4><p>Real-time monitoring with instant alerts when distraction is detected.</p></div>
+<div class="fcard"><div class="ficon"><i class="fas fa-lightbulb"></i></div><h4>AI Recommendations</h4><p>Personalized strategies, optimal duration, and smart revision timing.</p></div>
+<div class="fcard"><div class="ficon"><i class="fas fa-chart-line"></i></div><h4>Progress Dashboard</h4><p>Visual analytics of completion, focus scores, streaks, and weak areas.</p></div>
+</div>
+</div>
+<div>
+<div class="preview">
+<h3><i class="fas fa-calendar-day"></i> Today's Plan <span>May 10, 2026</span></h3>
+<div class="pstats">
+<div class="pstat"><b>75%</b><span>Focus Score</span></div>
+<div class="pstat"><b>12</b><span>Day Streak</span></div>
+</div>
+<div class="task"><i class="fas fa-check"></i> Physics - Chapter 2: Kinematics</div>
+<div class="task"><i class="fas fa-check"></i> Chemistry - Periodic Table Revision</div>
+<div class="task pending"><i class="fas fa-clock"></i> Mathematics - Calculus Problems</div>
+<div class="task pending"><i class="fas fa-clock"></i> English - Essay Writing Practice</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- SETUP -->
+<section class="sec" id="setup">
+<div class="setup">
+<h2>Let's Build Your Study Plan</h2>
+<p>Tell us about your goals and we'll create a personalized roadmap</p>
+<div class="steps">
+<div class="step active" id="s1"><div>1</div><span>Basic Info</span></div>
+<div class="step" id="s2"><div>2</div><span>Subjects</span></div>
+<div class="step" id="s3"><div>3</div><span>Topics</span></div>
+<div class="step" id="s4"><div>4</div><span>Review</span></div>
+</div>
+
+<div class="form" id="f1">
+<div class="form-g"><label><i class="fas fa-user"></i> Your Name</label><input type="text" id="name" value="Alex Student"></div>
+<div class="form-g"><label><i class="fas fa-graduation-cap"></i> Class</label>
+<select id="cls"><option>Class 10</option><option>Class 11</option><option selected>Class 12</option><option>Undergraduate</option></select>
+</div>
+<div class="form-g"><label><i class="fas fa-bullseye"></i> Exam Name</label><input type="text" id="exam" value="JEE Main 2026"></div>
+<div class="form-g"><label><i class="fas fa-calendar-alt"></i> Exam Date</label><input type="date" id="date" value="2026-06-15"></div>
+<div class="fact"><div></div><button class="btn btn-p" onclick="next(1)">Next <i class="fas fa-arrow-right"></i></button></div>
+</div>
+
+<div class="form" id="f2" style="display:none">
+<div class="form-g"><label><i class="fas fa-book"></i> Select Subjects</label><p style="color:#64748b;font-size:0.85rem;margin-bottom:10px">Click to select</p>
+<div class="tags" id="subtags">
+<span class="tag on" data-s="Physics">Physics</span>
+<span class="tag on" data-s="Chemistry">Chemistry</span>
+<span class="tag on" data-s="Mathematics">Mathematics</span>
+<span class="tag" data-s="Biology">Biology</span>
+<span class="tag" data-s="English">English</span>
+<span class="tag" data-s="Computer Science">Computer Science</span>
+</div>
+</div>
+<div class="fact"><button class="btn btn-s" onclick="prev(2)"><i class="fas fa-arrow-left"></i> Back</button><button class="btn btn-p" onclick="next(2)">Next <i class="fas fa-arrow-right"></i></button></div>
+</div>
+
+<div class="form" id="f3" style="display:none">
+<div class="form-g"><label><i class="fas fa-tags"></i> Topic Analysis</label><p style="color:#64748b;font-size:0.85rem;margin-bottom:12px">Categorize as Weak or Strong</p>
+<div class="tgrid">
+<div class="tcol"><h4><i class="fas fa-exclamation-triangle"></i> Weak Topics</h4><div class="tarea" id="weak"><span class="chip">Electromagnetism <span onclick="rm(this)">&times;</span></span><span class="chip">Organic Chemistry <span onclick="rm(this)">&times;</span></span><span class="chip">Integration <span onclick="rm(this)">&times;</span></span></div><input placeholder="Add weak topic..." onkeypress="addt(event,'weak')" style="margin-top:8px"></div>
+<div class="tcol"><h4><i class="fas fa-check-circle"></i> Strong Topics</h4><div class="tarea" id="strong"><span class="chip">Mechanics <span onclick="rm(this)">&times;</span></span><span class="chip">Physical Chemistry <span onclick="rm(this)">&times;</span></span><span class="chip">Algebra <span onclick="rm(this)">&times;</span></span></div><input placeholder="Add strong topic..." onkeypress="addt(event,'strong')" style="margin-top:8px"></div>
+</div>
+</div>
+<div class="fact"><button class="btn btn-s" onclick="prev(3)"><i class="fas fa-arrow-left"></i> Back</button><button class="btn btn-p" onclick="next(3)">Next <i class="fas fa-arrow-right"></i></button></div>
+</div>
+
+<div class="form" id="f4" style="display:none">
+<div class="form-g"><label><i class="fas fa-clipboard-check"></i> Review</label>
+<div style="background:#f8fafc;border-radius:10px;padding:18px;margin-top:10px;font-size:0.95rem;line-height:2">
+<div><b style="color:#6366f1">Name:</b> <span id="rname">Alex Student</span></div>
+<div><b style="color:#6366f1">Class:</b> <span id="rcls">Class 12</span></div>
+<div><b style="color:#6366f1">Exam:</b> <span id="rexam">JEE Main 2026</span> (June 15, 2026)</div>
+<div><b style="color:#6366f1">Subjects:</b> <span id="rsubs">Physics, Chemistry, Mathematics</span></div>
+<div><b style="color:#6366f1">Plan:</b> 36 days personalized roadmap</div>
+</div>
+</div>
+<div class="fact"><button class="btn btn-s" onclick="prev(4)"><i class="fas fa-arrow-left"></i> Back</button><button class="btn btn-p" onclick="gen()"><i class="fas fa-magic"></i> Generate Roadmap</button></div>
+</div>
+</div>
+</section>
+<!-- DASHBOARD -->
+<section class="sec" id="dash">
+<div class="dash">
+<div class="dh">
+<div><h2>Welcome back, <span id="dname">Alex</span>! <i class="fas fa-hand-sparkles" style="color:#f59e0b"></i></h2><p>You have <b>4 tasks</b> today &bull; Exam in <b>36 days</b> &bull; Focus: <b>85%</b></p></div>
+<div class="dacts">
+<button class="dbtn" onclick="toast('Notifications cleared','ok')" title="Notifications"><i class="fas fa-bell"></i></button>
+<button class="dbtn" onclick="toast('Settings opened','info')" title="Settings"><i class="fas fa-cog"></i></button>
+<button class="dbtn" style="background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff" onclick="openS()" title="Start Session"><i class="fas fa-play"></i></button>
+</div>
+</div>
+
+<div class="dgrid">
+<!-- Sidebar -->
+<div>
+<div class="sbar"><h4><i class="fas fa-compass"></i> Navigation</h4>
+<ul class="menu">
+<li><a class="on" onclick="tab('road')"><i class="fas fa-map"></i> Study Roadmap</a></li>
+<li><a onclick="tab('focus')"><i class="fas fa-brain"></i> Focus Monitor <span>Live</span></a></li>
+<li><a onclick="tab('ai')"><i class="fas fa-robot"></i> AI Recommendations</a></li>
+<li><a onclick="tab('prog')"><i class="fas fa-chart-pie"></i> Progress Report</a></li>
+</ul>
+</div>
+<div class="sbar"><h4><i class="fas fa-fire"></i> Study Streak</h4>
+<div class="streak"><div style="font-size:2rem">&#128293;</div><div><b>12 Days</b><p>Keep it up!</p></div></div>
+<div class="days"><div>Mon<br><i class="fas fa-check-circle"></i></div><div>Tue<br><i class="fas fa-check-circle"></i></div><div>Wed<br><i class="fas fa-check-circle"></i></div><div>Thu<br><i class="fas fa-check-circle"></i></div><div>Fri<br><i class="fas fa-check-circle"></i></div><div>Sat<br><i class="fas fa-circle off"></i></div><div>Sun<br><i class="fas fa-circle off"></i></div></div>
+</div>
+</div>
+
+<!-- Main -->
+<div class="main">
+<div class="stats">
+<div class="stat"><i class="fas fa-clock"></i><b>4.5h</b><span>Study Time Today</span><small><i class="fas fa-arrow-up"></i> +32% vs yesterday</small></div>
+<div class="stat"><i class="fas fa-bullseye"></i><b>85%</b><span>Average Focus Score</span><small><i class="fas fa-arrow-up"></i> +5% this week</small></div>
+<div class="stat"><i class="fas fa-tasks"></i><b>12/15</b><span>Tasks Completed</span><small><i class="fas fa-check"></i> 80% completion</small></div>
+</div>
+
+<!-- Roadmap -->
+<div class="card" id="t-road">
+<div class="ch"><h3><i class="fas fa-route" style="color:#6366f1"></i> Smart Study Roadmap</h3><span onclick="toast('Roadmap refreshed','ok')"><i class="fas fa-sync-alt"></i> Refresh</span></div>
+<div class="time">
+<div class="ritem"><div class="done"></div><div class="rc done"><small><i class="fas fa-check-circle"></i> May 9, 2026 &bull; Completed</small><b>Physics: Mechanics Fundamentals</b><span>Newton's Laws</span><span>Friction</span><span>Circular Motion</span></div></div>
+<div class="ritem"><div class="now"></div><div class="rc now"><small><i class="fas fa-clock"></i> Today, May 10, 2026 &bull; In Progress</small><b>Physics: Electromagnetism Basics</b><span>Electric Fields</span><span>Coulomb's Law</span><span>Capacitance</span><div class="ra"><button class="btn btn-p btn-sm" onclick="openS()"><i class="fas fa-play"></i> Continue</button><button class="btn btn-s btn-sm" onclick="toast('Marked for revision','info')"><i class="fas fa-bookmark"></i> Mark</button></div></div></div>
+<div class="ritem"><div></div><div class="rc"><small><i class="fas fa-calendar"></i> May 11, 2026 &bull; Upcoming</small><b>Chemistry: Organic Reactions</b><span>Reaction Mechanisms</span><span>Named Reactions</span></div></div>
+<div class="ritem"><div></div><div class="rc"><small><i class="fas fa-calendar"></i> May 12, 2026 &bull; Upcoming</small><b>Mathematics: Integration Techniques</b><span>By Parts</span><span>Substitution</span><span>Partial Fractions</span></div></div>
+<div class="ritem"><div></div><div class="rc"><small><i class="fas fa-redo"></i> May 13, 2026 &bull; Revision Day</small><b>Revision: Week 1 Topics</b><span>Flashcards</span><span>Practice Test</span><span>Formula Review</span></div></div>
+</div>
+</div>
+
+<!-- Focus -->
+<div class="card" id="t-focus" style="display:none">
+<div class="ch"><h3><i class="fas fa-brain" style="color:#6366f1"></i> Real-Time Focus Monitor</h3><span onclick="simD()"><i class="fas fa-vial"></i> Simulate Distraction</span></div>
+<div class="focus">
+<div class="fh"><h4><i class="fas fa-wave-square"></i> Focus Analysis</h4><span><i></i> <span id="fst">Monitoring Active</span></span></div>
+<div class="fg"><div class="gauge" id="gg"><div class="gin"><b id="fs">85%</b><span>Focus Score</span></div></div></div>
+<div class="fm"><div><b style="color:#10b981">12 min</b><span>Deep Focus</span></div><div><b style="color:#f59e0b">2</b><span>Breaks Taken</span></div><div><b style="color:#6366f1">0</b><span>App Switches</span></div><div><b style="color:#10b981">Good</b><span>Posture</span></div></div>
+<div class="fa" id="falerts">
+<div class="alert"><i class="fas fa-info-circle"></i><div><b>Tip:</b> You're in a great flow state! Keep going for 8 more minutes, then take a recommended break.</div></div>
+</div>
+</div>
+</div>
+
+<!-- AI -->
+<div class="card" id="t-ai" style="display:none">
+<div class="ch"><h3><i class="fas fa-robot" style="color:#6366f1"></i> AI Recommendations</h3><span onclick="toast('AI updated','ok')"><i class="fas fa-brain"></i> Update AI</span></div>
+<div class="ai"><h5><i class="fas fa-lightbulb"></i> Smart Topic Ordering <span>AI</span></h5><p>Based on your weak topics, start with <b>Electromagnetism</b> before <b>Organic Chemistry</b>. Your brain is freshest in the morning for physics.</p></div>
+<div class="ai"><h5><i class="fas fa-clock"></i> Optimal Study Duration <span>AI</span></h5><p>Your focus pattern shows peak concentration for <b>45-minute sessions</b> followed by <b>10-minute breaks</b>. Roadmap adjusted accordingly.</p></div>
+<div class="ai"><h5><i class="fas fa-redo"></i> Spaced Revision <span>AI</span></h5><p>AI suggests revising <b>Mechanics</b> on Day 3, Day 7, and Day 14 for optimal retention based on Ebbinghaus forgetting curve.</p></div>
+<div class="ai"><h5><i class="fas fa-chart-line"></i> Performance Prediction <span>AI</span></h5><p>At your current pace, you'll complete 85% of syllabus by exam date. Consider adding 30 extra minutes daily to reach 95%.</p></div>
+</div>
+
+<!-- Progress -->
+<div class="card" id="t-prog" style="display:none">
+<div class="ch"><h3><i class="fas fa-chart-pie" style="color:#6366f1"></i> Progress Analytics</h3><span onclick="toast('Report exported','ok')"><i class="fas fa-download"></i> Export</span></div>
+<div class="pcharts">
+<div class="pchart"><h4>Weekly Study Hours</h4><div class="bars"><div style="height:60%;opacity:0.3"></div><div style="height:75%;opacity:0.5"></div><div style="height:50%;opacity:0.4"></div><div style="height:90%;opacity:0.8"></div><div style="height:100%"></div><div style="height:80%;opacity:0.7"></div><div style="height:45%;opacity:0.3"></div></div><div style="display:flex;justify-content:center;gap:6px;margin-top:8px;font-size:0.7rem;color:#64748b"><span style="width:25px;text-align:center">M</span><span style="width:25px;text-align:center">T</span><span style="width:25px;text-align:center">W</span><span style="width:25px;text-align:center">T</span><span style="width:25px;text-align:center">F</span><span style="width:25px;text-align:center">S</span><span style="width:25px;text-align:center">S</span></div></div>
+<div class="pchart"><h4>Subject Distribution</h4><div class="pie"><svg viewBox="0 0 100 100" width="100" height="100"><circle cx="50" cy="50" r="40" fill="none" stroke="#e0e7ff" stroke-width="10"/><circle cx="50" cy="50" r="40" fill="none" stroke="#6366f1" stroke-width="10" stroke-dasharray="75 176" stroke-linecap="round" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="#10b981" stroke-width="10" stroke-dasharray="50 201" stroke-dashoffset="-75" stroke-linecap="round" transform="rotate(-90 50 50)"/><circle cx="50" cy="50" r="40" fill="none" stroke="#f59e0b" stroke-width="10" stroke-dasharray="38 213" stroke-dashoffset="-125" stroke-linecap="round" transform="rotate(-90 50 50)"/></svg><div>75%</div></div><div style="display:flex;justify-content:center;gap:12px;margin-top:12px;font-size:0.8rem"><span><span style="color:#6366f1">&#9679;</span> Physics 40%</span><span><span style="color:#10b981">&#9679;</span> Chem 30%</span><span><span style="color:#f59e0b">&#9679;</span> Math 20%</span></div></div>
+</div>
+</div>
+</div>
+
+<!-- Right Panel -->
+<div>
+<div class="sbar"><h4><i class="fas fa-bullseye"></i> Overall Progress</h4>
+<div class="rings"><div class="ring"><svg width="130" height="130"><circle cx="65" cy="65" r="52" fill="none" stroke="#e2e8f0" stroke-width="8"/><circle cx="65" cy="65" r="52" fill="none" stroke="#6366f1" stroke-width="8" stroke-dasharray="327" stroke-dashoffset="82" stroke-linecap="round" transform="rotate(-90 65 65)"/></svg><div><b>75%</b><span>Complete</span></div></div></div>
+<div style="text-align:center;color:#64748b;font-size:0.85rem"><i class="fas fa-flag-checkered"></i> 36 days to exam</div>
+</div>
+<div class="sbar"><h4><i class="fas fa-exclamation-triangle"></i> Weak Areas</h4>
+<ul class="wlist">
+<li class="witem"><span>Physics</span><div><div style="width:35%;background:#ef4444"></div></div><span>35%</span></li>
+<li class="witem"><span>Chemistry</span><div><div style="width:55%;background:#f59e0b"></div></div><span>55%</span></li>
+<li class="witem"><span>Math</span><div><div style="width:60%;background:#f59e0b"></div></div><span>60%</span></li>
+<li class="witem"><span>English</span><div><div style="width:82%;background:#10b981"></div></div><span>82%</span></li>
+</ul>
+</div>
+<div class="sbar"><h4><i class="fas fa-bell"></i> Smart Alerts</h4>
+<div class="notif"><i class="fas fa-clock" style="color:#f59e0b;margin-right:6px"></i><b>Break Time:</b> You've been studying for 45 min. Take a 10-min break!</div>
+<div class="notif"><i class="fas fa-book" style="color:#6366f1;margin-right:6px"></i><b>Revision Due:</b> Mechanics chapter needs revision today.</div>
+<div class="notif"><i class="fas fa-trophy" style="color:#10b981;margin-right:6px"></i><b>Milestone:</b> 12-day streak! Keep it up!</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+
+<!-- FEATURES -->
+<section class="sec" id="feat">
+<div class="fpage">
+<h2>Powerful Features for Smart Learning</h2>
+<div class="fdgrid">
+<div class="fdcard"><div class="fdicon"><i class="fas fa-map-marked-alt"></i></div><h3>Smart Study Roadmap</h3><p>AI generates personalized daily study targets, topic ordering, revision schedules, and priority chapters based on your exam timeline and subject strengths.</p><ul><li>Daily study targets</li><li>Optimal topic sequencing</li><li>Automatic revision calendar</li><li>Priority chapter highlighting</li></ul></div>
+<div class="fdcard"><div class="fdicon"><i class="fas fa-brain"></i></div><h3>Focus Detection System</h3><p>Real-time monitoring detects inactivity, app switching, long pauses, and typing pattern changes to alert you when focus drops.</p><ul><li>Inactivity detection</li><li>App switching alerts</li><li>Pattern change analysis</li><li>Gentle recovery suggestions</li></ul></div>
+<div class="fdcard"><div class="fdicon"><i class="fas fa-robot"></i></div><h3>AI-Based Recommendations</h3><p>Machine learning algorithms analyze your performance to suggest easier topics first, smart revision timing, and personalized strategies.</p><ul><li>Adaptive difficulty ordering</li><li>Spaced repetition timing</li><li>Optimal session duration</li><li>Personalized strategies</li></ul></div>
+<div class="fdcard"><div class="fdicon"><i class="fas fa-chart-line"></i></div><h3>Progress Dashboard</h3><p>Comprehensive analytics showing completion percentage, focus scores, study streaks, weak areas, and revision status at a glance.</p><ul><li>Visual completion tracking</li><li>Focus score history</li><li>Streak counter</li><li>Weak area identification</li></ul></div>
+<div class="fdcard"><div class="fdicon"><i class="fas fa-heart"></i></div><h3>Recovery Techniques</h3><p>When distraction is detected, the system suggests 2-minute breaks, deep breathing exercises, method changes, or quick quizzes.</p><ul><li>Guided breathing exercises</li><li>Smart break reminders</li><li>Method switching tips</li><li>Quick quiz challenges</li></ul></div>
+<div class="fdcard"><div class="fdicon"><i class="fas fa-rocket"></i></div><h3>Future Scope</h3><p>Planned enhancements include voice assistant, eye tracking, emotion detection, wearable integration, and parent/teacher dashboards.</p><ul><li>Voice assistant integration</li><li>Eye tracking for focus</li><li>Emotion detection</li><li>Wearable device sync</li></ul></div>
+</div>
+</div>
+</section>
+
+<!-- Study Session Modal -->
+<div class="modal" id="modal">
+<div class="mbox">
+<button class="mclose" onclick="closeS()"><i class="fas fa-times"></i></button>
+<h2 style="text-align:center;margin-bottom:8px"><i class="fas fa-graduation-cap" style="color:#6366f1"></i> Study Session</h2>
+<p style="text-align:center;color:#64748b;margin-bottom:15px">Physics: Electromagnetism Basics</p>
+<div class="timer" id="td"><div><b id="tt">45:00</b><span>minutes remaining</span></div></div>
+<div class="breath" id="be"><div><i class="fas fa-lungs"></i></div><p id="bt">Breathe In...</p><p style="color:#64748b;font-size:0.85rem;margin-top:8px">Follow the circle. Inhale as it expands, exhale as it contracts.</p></div>
+<div class="sctrl">
+<button class="btn btn-s" id="pb" onclick="tp()"><i class="fas fa-pause"></i> Pause</button>
+<button class="btn btn-p" onclick="sb()"><i class="fas fa-wind"></i> Breathing Break</button>
+<button class="btn btn-s" style="background:#ef4444;color:#fff;border-color:#ef4444" onclick="closeS()"><i class="fas fa-stop"></i> End</button>
+</div>
+<div style="margin-top:20px;padding:12px;background:#f8fafc;border-radius:10px">
+<h4 style="font-size:0.9rem;margin-bottom:8px"><i class="fas fa-tasks"></i> Session Tasks</h4>
+<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;padding:4px 0;cursor:pointer"><input type="checkbox" style="accent-color:#6366f1"> Read Electric Fields theory (15 min)</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;padding:4px 0;cursor:pointer"><input type="checkbox" style="accent-color:#6366f1"> Solve Coulomb's Law problems (20 min)</label>
+<label style="display:flex;align-items:center;gap:8px;font-size:0.85rem;padding:4px 0;cursor:pointer"><input type="checkbox" style="accent-color:#6366f1"> Practice Capacitance numericals (10 min)</label>
+</div>
+</div>
+</div>
+
+<script>
+// Hide loader when page loads
+window.addEventListener('load', function() {
+    setTimeout(function() {
+        document.getElementById('loader').classList.add('hidden');
+    }, 1000);
+});
+
+// Navigation
+function go(id) {
+    var secs = document.querySelectorAll('.sec');
+    for (var i = 0; i < secs.length; i++) secs[i].classList.remove('active');
+    document.getElementById(id).classList.add('active');
+    var links = document.querySelectorAll('.nav-links a');
+    for (var i = 0; i < links.length; i++) links[i].classList.remove('active');
+    document.getElementById('n-' + id).classList.add('active');
+    window.scrollTo(0, 0);
+}
+
+// Toast
+function toast(msg, type) {
+    var c = document.getElementById('toasts');
+    var t = document.createElement('div');
+    t.className = 'toast ' + type;
+    var icons = {ok: 'fa-check-circle', warn: 'fa-exclamation-triangle', err: 'fa-times-circle', info: 'fa-info-circle'};
+    t.innerHTML = '<i class="fas ' + icons[type] + '"></i><div><h4>' + type.toUpperCase() + '</h4><p>' + msg + '</p></div>';
+    c.appendChild(t);
+    setTimeout(function() {
+        t.style.opacity = '0';
+        t.style.transform = 'translateX(100%)';
+        t.style.transition = '0.3s';
+        setTimeout(function() { t.remove(); }, 300);
+    }, 2500);
+}
+
+// Setup Wizard
+var cs = 1;
+function next(s) {
+    document.getElementById('f' + s).style.display = 'none';
+    document.getElementById('f' + (s + 1)).style.display = 'block';
+    document.getElementById('s' + s).classList.remove('active');
+    document.getElementById('s' + s).classList.add('done');
+    document.getElementById('s' + (s + 1)).classList.add('active');
+    if (s == 3) updR();
+    cs = s + 1;
+}
+function prev(s) {
+    document.getElementById('f' + s).style.display = 'none';
+    document.getElementById('f' + (s - 1)).style.display = 'block';
+    document.getElementById('s' + s).classList.remove('active');
+    document.getElementById('s' + (s - 1)).classList.remove('done');
+    document.getElementById('s' + (s - 1)).classList.add('active');
+    cs = s - 1;
+}
+function updR() {
+    document.getElementById('rname').textContent = document.getElementById('name').value;
+    document.getElementById('rcls').textContent = document.getElementById('cls').value;
+    document.getElementById('rexam').textContent = document.getElementById('exam').value + ' (' + document.getElementById('date').value + ')';
+    var subs = [];
+    var tags = document.querySelectorAll('.tag.on');
+    for (var i = 0; i < tags.length; i++) subs.push(tags[i].dataset.s);
+    document.getElementById('rsubs').textContent = subs.join(', ') || 'None';
+}
+
+// Subject tags
+var tags = document.querySelectorAll('.tag');
+for (var i = 0; i < tags.length; i++) {
+    tags[i].addEventListener('click', function() { this.classList.toggle('on'); });
+}
+
+// Topics
+function addt(e, type) {
+    if (e.key == 'Enter') {
+        var v = e.target.value.trim();
+        if (v) {
+            var d = document.createElement('span');
+            d.className = 'chip';
+            d.innerHTML = v + ' <span onclick="rm(this)">&times;</span>';
+            document.getElementById(type).appendChild(d);
+            e.target.value = '';
+        }
+    }
+}
+function rm(el) { el.parentElement.remove(); }
+
+function gen() {
+    toast('Generating your personalized study roadmap...', 'info');
+    setTimeout(function() {
+        toast('Smart Roadmap generated!', 'ok');
+        document.getElementById('dname').textContent = document.getElementById('name').value.split(' ')[0];
+        go('dash');
+    }, 1500);
+}
+
+// Dashboard tabs
+function tab(t) {
+    var links = document.querySelectorAll('.menu a');
+    for (var i = 0; i < links.length; i++) links[i].classList.remove('on');
+    event.target.closest('a').classList.add('on');
+    var tabs = ['road', 'focus', 'ai', 'prog'];
+    for (var i = 0; i < tabs.length; i++) document.getElementById('t-' + tabs[i]).style.display = 'none';
+    document.getElementById('t-' + t).style.display = 'block';
+}
+
+// Study Session
+var tm = null, ts = 45 * 60, p = false;
+function openS() {
+    document.getElementById('modal').classList.add('on');
+    startT();
+    toast('Study session started! Focus monitor active.', 'ok');
+}
+function closeS() {
+    document.getElementById('modal').classList.remove('on');
+    stopT();
+    document.getElementById('be').classList.remove('on');
+    document.getElementById('td').style.display = 'block';
+    toast('Session completed! Great work!', 'ok');
+}
+function startT() {
+    ts = 45 * 60; p = false; updT();
+    tm = setInterval(function() {
+        if (!p && ts > 0) {
+            ts--; updT();
+            if (ts == 40 * 60) toast('Focus score: 92% - You are in the zone!', 'ok');
+            if (ts == 30 * 60) toast('You have studied 15 min. Consider a quick stretch!', 'warn');
+        }
+    }, 1000);
+}
+function stopT() { clearInterval(tm); }
+function updT() {
+    var m = Math.floor(ts / 60), s = ts % 60;
+    document.getElementById('tt').textContent = String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+}
+function tp() {
+    p = !p;
+    var b = document.getElementById('pb');
+    if (p) { b.innerHTML = '<i class="fas fa-play"></i> Resume'; toast('Session paused', 'info'); }
+    else { b.innerHTML = '<i class="fas fa-pause"></i> Pause'; toast('Session resumed', 'ok'); }
+}
+function sb() {
+    document.getElementById('td').style.display = 'none';
+    document.getElementById('be').classList.add('on');
+    var st = 0;
+    var bi = setInterval(function() {
+        if (!document.getElementById('be').classList.contains('on')) { clearInterval(bi); return; }
+        st = 1 - st; document.getElementById('bt').textContent = st == 0 ? 'Breathe In...' : 'Breathe Out...';
+    }, 4000);
+    setTimeout(function() {
+        document.getElementById('be').classList.remove('on');
+        document.getElementById('td').style.display = 'block';
+        clearInterval(bi);
+        toast('Break complete! Ready to focus?', 'ok');
+    }, 12000);
+}
+
+// Simulate distraction
+function simD() {
+    document.getElementById('fs').textContent = '62%';
+    document.getElementById('fs').style.color = '#f59e0b';
+    document.getElementById('gg').style.background = 'conic-gradient(from 0deg,#f59e0b 0deg,#f59e0b 223deg,rgba(255,255,255,0.1) 223deg)';
+    document.getElementById('fst').textContent = 'Distraction Detected';
+    var a = document.createElement('div');
+    a.className = 'alert danger';
+    a.innerHTML = '<i class="fas fa-exclamation-triangle"></i><div><b>Alert:</b> Inactivity detected for 3 min. App switched 2 times. <button class="btn btn-sm btn-p" style="margin-left:8px" onclick="this.parentElement.parentElement.remove();rec()">Recover</button></div>';
+    document.getElementById('falerts').appendChild(a);
+    toast('Distraction detected! Focus dropped to 62%', 'warn');
+}
+function rec() {
+    document.getElementById('fs').textContent = '85%';
+    document.getElementById('fs').style.color = '#10b981';
+    document.getElementById('gg').style.background = 'conic-gradient(from 0deg,#10b981 0deg,#10b981 252deg,rgba(255,255,255,0.1) 252deg)';
+    document.getElementById('fst').textContent = 'Monitoring Active';
+    toast('Focus recovered! Back on track.', 'ok');
+}
+
+document.addEventListener('keydown', function(e) { if (e.key == 'Escape') closeS(); });
+</script>
+</body>
+</html>
